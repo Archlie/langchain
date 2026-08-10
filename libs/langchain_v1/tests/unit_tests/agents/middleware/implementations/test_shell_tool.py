@@ -730,3 +730,17 @@ def test_shell_tool_with_checkpointer_does_not_raise_msgpack_error(tmp_path: Pat
     tool_messages = [m for m in result["messages"] if isinstance(m, ToolMessage)]
     assert tool_messages
     assert "hi" in str(tool_messages[0].content)
+def test_shell_session_command_without_trailing_newline(tmp_path: Path) -> None:
+    """Detect completion marker when command output has no trailing newline.
+
+    Regression test for #39363: ``printf 'hello'`` produces stdout without a
+    trailing newline.  The command output and the completion marker end up on
+    the same ``readline()`` line, so ``data.startswith(marker)`` used to fail,
+    causing a false timeout.
+    """
+    session = ShellSession(tmp_path, HostExecutionPolicy(), ("/bin/bash",), {})
+    result = session.execute("printf 'hello-without-newline'", timeout=5.0)
+
+    assert result.output == "hello-without-newline"
+    assert result.exit_code == 0
+    assert result.timed_out is False
